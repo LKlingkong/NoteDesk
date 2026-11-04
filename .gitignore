@@ -2,3 +2,4 @@ dist/
 qa-path.txt
 *.tmp
 *.log
+.qa/
