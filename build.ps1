@@ -6,7 +6,7 @@ $refs = @('System.dll','System.Core.dll','System.Web.Extensions.dll','System.Win
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $outputExe = Join-Path $OutputDirectory "NoteDesk.exe"
 $sources = @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.cs' | ForEach-Object FullName)
-& $compiler /nologo /target:winexe /platform:anycpu /optimize+ /codepage:65001 /win32icon:"$PSScriptRoot\assets\NoteDesk.ico" /out:"$outputExe" $refs $sources
+& $compiler /nologo /target:winexe /platform:anycpu /optimize+ /codepage:65001 /win32icon:"$PSScriptRoot\assets\NoteDesk.ico" /resource:"$PSScriptRoot\assets\CloudsWallpaper.png",NoteDesk.CloudsWallpaper.png /out:"$outputExe" $refs $sources
 if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
 Write-Output "Built $outputExe"
 

@@ -19,7 +19,7 @@ public static class AppearancePalette {
     static readonly Dictionary<string,ColorToken> tokens=new Dictionary<string,ColorToken>(StringComparer.OrdinalIgnoreCase);
     // Keys are the existing palette tokens, so stored note colors and old screens stay compatible.
     static readonly string[,] colors={
-        {"#302F2C","#1D1D1F","#F5F5F7"},{"#706D65","#626269","#B4B4BA"},
+        {"#302F2C","#1D1D1F","#F5F5F7"},{"#706D65","#585860","#B4B4BA"},
         {"#596F60","#0066CC","#0A84FF"},{"#E5E1D8","#DCDDE3","#48484E"},
         {"#FAF9F6","#F5F5F7","#1C1C1E"},{"#FFFAF9F6","#F9F9FB","#29292D"},
         {"#EDEAE3","#E8E9EE","#3A3A40"},{"#F0EEE7","#80DDE5F0","#902A303B"},
@@ -110,8 +110,8 @@ public static class DesktopGlass {
             int textColor=ink.R|(ink.G<<8)|(ink.B<<16);
             DwmSetWindowAttribute(handle,36,ref textColor,4);
             int rounded=2;DwmSetWindowAttribute(handle,33,ref rounded,4);
-            int backdrop=EffectsAllowed?3:1;
-            glass=DwmSetWindowAttribute(handle,38,ref backdrop,4)==0 && EffectsAllowed;
+            int backdrop=window is Manager?1:EffectsAllowed?3:1;
+            glass=DwmSetWindowAttribute(handle,38,ref backdrop,4)==0 && EffectsAllowed && !(window is Manager);
             var margins=new Margins {Left=glass?-1:0,Right=glass?-1:0,Top=glass?-1:0,Bottom=glass?-1:0};
             if(DwmExtendFrameIntoClientArea(handle,ref margins)!=0)glass=false;
             var source=HwndSource.FromHwnd(handle);

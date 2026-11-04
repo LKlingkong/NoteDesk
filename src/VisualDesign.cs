@@ -55,6 +55,17 @@ public static class VisualDesign {
     <Style TargetType='ComboBoxItem'>
       <Setter Property='Foreground' Value='{DynamicResource NoteDeskColor302F2C}'/><Setter Property='Padding' Value='10,8'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='ComboBoxItem'><Border x:Name='item' CornerRadius='6' Padding='{TemplateBinding Padding}'><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property='IsHighlighted' Value='True'><Setter TargetName='item' Property='Background' Value='{DynamicResource NoteDeskColorDFE7DD}'/><Setter Property='Foreground' Value='{DynamicResource NoteDeskColor344F3D}'/></Trigger><Trigger Property='IsSelected' Value='True'><Setter TargetName='item' Property='Background' Value='{DynamicResource NoteDeskColorDFE7DD}'/><Setter Property='Foreground' Value='{DynamicResource NoteDeskColor344F3D}'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
     </Style>
+    <Style TargetType='Slider'>
+      <Setter Property='MinHeight' Value='22'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='Slider'>
+        <Grid Background='Transparent' Margin='2,0'><Border Height='4' CornerRadius='2' Background='{DynamicResource NoteDeskColor22596F60}' VerticalAlignment='Center'/>
+          <Track x:Name='PART_Track' Orientation='Horizontal' Minimum='{TemplateBinding Minimum}' Maximum='{TemplateBinding Maximum}' Value='{TemplateBinding Value}'>
+            <Track.DecreaseRepeatButton><RepeatButton Command='Slider.DecreaseLarge' Focusable='False'><RepeatButton.Template><ControlTemplate><Border Height='4' CornerRadius='2' Background='{DynamicResource NoteDeskColor596F60}' VerticalAlignment='Center'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton>
+            <Track.Thumb><Thumb Width='16' Height='18'><Thumb.Template><ControlTemplate><Grid Background='Transparent'><Border Width='14' Height='14' CornerRadius='7' Background='{DynamicResource NoteDeskColor596F60}' BorderBrush='{DynamicResource NoteDeskColorprimary-ink}' BorderThickness='2'/></Grid></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+            <Track.IncreaseRepeatButton><RepeatButton Command='Slider.IncreaseLarge' Focusable='False' Opacity='0'/></Track.IncreaseRepeatButton>
+          </Track>
+        </Grid><ControlTemplate.Triggers><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
     <Style TargetType='DatePickerTextBox' BasedOn='{StaticResource {x:Type TextBox}}'/>
     <Style TargetType='DatePicker'>
       <Setter Property='Foreground' Value='{DynamicResource NoteDeskColor302F2C}'/><Setter Property='Background' Value='{DynamicResource NoteDeskColor90FFFFFF}'/><Setter Property='BorderBrush' Value='{DynamicResource NoteDeskColorDCD8CE}'/><Setter Property='MinHeight' Value='36'/>

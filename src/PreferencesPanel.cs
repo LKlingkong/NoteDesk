@@ -14,6 +14,7 @@ public sealed class PreferencesPanel:StackPanel {
         theme.SelectedIndex=app.Store.Data.Appearance=="light"?1:app.Store.Data.Appearance=="dark"?2:0;
         System.Windows.Automation.AutomationProperties.SetName(theme,"外观主题");Children.Add(theme);
         theme.SelectionChanged+=(s,e)=>app.SetAppearance(theme.SelectedIndex==1?"light":theme.SelectedIndex==2?"dark":"system");
+        Children.Add(new WallpaperPreferences(app));
         var title=UI.Text("快捷新建",17,UI.Ink);title.FontWeight=FontWeights.SemiBold;Children.Add(title);
         var description=UI.Text("在其他软件中按下快捷键，即可创建便签并直接输入。",12,UI.Muted);description.Margin=new Thickness(0,6,0,12);Children.Add(description);
         var enabled=new CheckBox {Content="启用全局快捷键",IsChecked=app.Store.Data.HotkeyEnabled,Margin=new Thickness(0,0,0,12)};Children.Add(enabled);

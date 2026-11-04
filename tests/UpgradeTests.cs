@@ -10,7 +10,9 @@ using System.Windows.Threading;
 using NoteDesk;
 
 public static class UpgradeTests {
+    [StructLayout(LayoutKind.Sequential)] struct RectNative {public int Left,Top,Right,Bottom;}
     [DllImport("user32.dll")] static extern void keybd_event(byte key,byte scan,int flags,UIntPtr extra);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr handle,out RectNative rect);
     static void Assert(bool condition,string message) { if(!condition) throw new Exception(message); }
     [STAThread] public static int Main(string[] args) {
         try {
@@ -84,9 +86,17 @@ public static class UpgradeTests {
     }
     static void Key(byte key,bool up){keybd_event(key,0,up?2:0,UIntPtr.Zero);}
     static void Press(byte key){Key(0x11,false);Key(0x12,false);Key(key,false);Key(key,true);Key(0x12,true);Key(0x11,true);}
-    static Button FindButton(DependencyObject parent,string label){var button=parent as Button;if(button!=null&&button.Content as string==label)return button;for(int i=0;i<System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);i++){var found=FindButton(System.Windows.Media.VisualTreeHelper.GetChild(parent,i),label);if(found!=null)return found;}return null;}
+    static void Pump(){var frame=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle,new Action(()=>frame.Continue=false));Dispatcher.PushFrame(frame);}
+    static Button FindButton(DependencyObject parent,string label){var button=parent as Button;if(button!=null&&(button.Content as string==label||System.Windows.Automation.AutomationProperties.GetName(button)==label))return button;for(int i=0;i<System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);i++){var found=FindButton(System.Windows.Media.VisualTreeHelper.GetChild(parent,i),label);if(found!=null)return found;}return null;}
     static int DesktopFlow(DeskApp app) {
         app.Start();string error;
+        app.Manager.UpdateLayout();var maximize=FindButton((DependencyObject)app.Manager.Content,"最大化／还原");Assert(maximize!=null,"custom caption maximize exists");maximize.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));app.Manager.UpdateLayout();
+        Assert(app.Manager.WindowState==WindowState.Maximized,"caption maximizes");
+        var handle=new System.Windows.Interop.WindowInteropHelper(app.Manager).Handle;RectNative bounds;GetWindowRect(handle,out bounds);var work=System.Windows.Forms.Screen.FromHandle(handle).WorkingArea;
+        Assert(bounds.Left>=work.Left-8&&bounds.Top>=work.Top-8&&bounds.Right<=work.Right+8&&bounds.Bottom<=work.Bottom+8,"maximized window respects monitor work area; actual="+bounds.Left+","+bounds.Top+","+bounds.Right+","+bounds.Bottom+" work="+work.Left+","+work.Top+","+work.Right+","+work.Bottom);
+        maximize.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Assert(app.Manager.WindowState==WindowState.Normal,"caption restores");
+        FindButton((DependencyObject)app.Manager.Content,"最小化").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Pump();Assert(app.Manager.WindowState==WindowState.Minimized,"caption minimizes");app.ShowManager();
+        FindButton((DependencyObject)app.Manager.Content,"关闭窗口并驻留托盘").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Pump();Assert(!app.Manager.IsVisible&&!app.Exiting,"caption close keeps app alive");app.ShowManager();
         Console.WriteLine("Native backdrop: effects="+DesktopGlass.EffectsAllowed+", background alpha="+((System.Windows.Media.SolidColorBrush)app.Manager.Background).Color.A);
         Assert(app.ConfigureHotkey(true,3,0x77,out error),"configure desktop test shortcut: "+error);
         app.Manager.Hide();

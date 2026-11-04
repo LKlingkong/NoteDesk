@@ -1,0 +1,13 @@
+# NoteDesk 1.2 wallpaper glass design
+
+Approved through grilling rounds Q1–Q7 on 2026-11-04. Continue implementation in the current checkout and branch.
+
+- Use the user-supplied 3000x1687 blue-sky/pink-cloud wallpaper as the embedded default for the manager and its settings. The source file is `assets/CloudsWallpaper.png`; embed unchanged in the portable executable. Independent desktop notes continue using the actual Windows desktop backdrop.
+- Separate rounded glass islands for navigation, heading/search, note cards and status. Settings use one readable glass surface. Leave wallpaper visible in outer gutters, inter-panel gaps and empty space. Keep existing information hierarchy and note actions.
+- Prefer reading: initial glass opacity 86%, blur 24 DIP, wallpaper brightness 85%. Keep text sharp and fully opaque. Blue actions/selection, restrained pink-purple border highlight. Light/dark/system continue to work. System transparency-off gives opaque panels; high contrast gives solid system colors.
+- Wallpaper covers the window at original aspect ratio, cropping edges, default horizontal center and bottom alignment. Expose position fine tuning. Titlebar is part of this scene, with standard right-aligned minimize/maximize/close, drag, double-click maximize, resize and system-menu behavior.
+- Settings: change wallpaper, blur, panel opacity, wallpaper brightness, restore defaults, collapsed position controls. Changes preview immediately and persist after a short pause. Custom images are validated and copied into app data so moving the original does not break the wallpaper. Missing/invalid custom files fall back to embedded default. Reset affects wallpaper/material, not notes, theme or shortcut.
+- No third-party runtime. Internally blur only wallpaper, using one bounded, cached WPF bitmap shared by all glass panels. Each panel samples the corresponding scene coordinates, including scrolling and resizing; no independent per-card wallpaper repetitions. Never blur foreground text or editors. No full-window screenshot feedback loop.
+- Preserve notes, reminders, history, backups, shortcut/body focus, data location and hidden-to-tray close behavior. JSON backups do not contain custom image bytes; document that custom images must be reselected on another machine if not copied with the data directory.
+
+Acceptance: legacy defaults and file validation, aspect crop/position bounds, embedded-resource availability, uniform blur alignment and actual smoothing, readable solid fallback, geometry at minimum/maximized sizes, settings persistence/reset, real shortcut regression, both themes/all screens rendered and reviewed, independent code review. Tests use isolated data only. Local deliverables; no GitHub publication requested.
