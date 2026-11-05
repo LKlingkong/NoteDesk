@@ -34,7 +34,7 @@ public static class AppearancePalette {
         {"#F8EEE5","#FCF0EB","#40312E"},{"#EDF1F5","#EDF3FC","#2B3545"},
         {"#F4EEF4","#F5EFFA","#383043"},
         {"window-tint","#BFF5F5F7","#D41C1C1E"},{"primary-fill","#0066CC","#0066CC"},{"primary-ink","#FFFFFF","#FFFFFF"},
-        {"toast-surface","#F2F5F5F7","#F229292D"}
+        {"toast-surface","#F2F5F5F7","#F229292D"},{"note-divider","#40585860","#50B4B4BA"},{"note-rim","#A0FFFFFF","#80666F82"}
     };
     public static bool IsDark {get;private set;}
     public static string Mode {get;private set;}
@@ -77,6 +77,7 @@ public static class AppearancePalette {
             tokens["#344F3D"].Value=SystemColors.HighlightTextColor;
             tokens["primary-fill"].Value=SystemColors.HighlightColor;
             tokens["primary-ink"].Value=SystemColors.HighlightTextColor;
+            tokens["note-divider"].Value=SystemColors.WindowTextColor;tokens["note-rim"].Value=SystemColors.WindowTextColor;
             for(int i=0;i<5;i++)tokens[colors[21+i,0]].Value=SystemColors.WindowColor;
         }
     }
@@ -97,6 +98,14 @@ public static class DesktopGlass {
     public static void Apply(Window window) {
         var handle=new WindowInteropHelper(window).Handle;
         if(handle==IntPtr.Zero)return;
+        // A note owns its per-pixel surface. Any window tint or Acrylic underneath
+        // would mask the opacity slider; never reapply it on theme changes.
+        if(window is NoteWindow) {
+            window.Background=Brushes.Transparent;
+            var noteSource=HwndSource.FromHwnd(handle);
+            if(noteSource!=null&&noteSource.CompositionTarget!=null)noteSource.CompositionTarget.BackgroundColor=Colors.Transparent;
+            return;
+        }
         // Layered toast windows use their own surface and cannot host a DWM backdrop.
         if(window.AllowsTransparency){var toast=window as UndoToast;var surface=window.Content as System.Windows.Controls.Border;if(toast!=null&&surface!=null)surface.Background=AppearancePalette.ToastBrush(EffectsAllowed);return;}
         bool glass=false;

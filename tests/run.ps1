@@ -16,3 +16,21 @@ $wallpaperExe=Join-Path $qaRoot 'WallpaperTests.exe'
 if($LASTEXITCODE -ne 0){throw 'Wallpaper test compilation failed'}
 & $wallpaperExe
 if($LASTEXITCODE -ne 0){throw 'Wallpaper tests failed'}
+
+$interactionExe=Join-Path $qaRoot 'InteractionTests.exe'
+& $compiler /nologo /target:exe /main:InteractionTests /codepage:65001 /resource:"$projectRoot\assets\CloudsWallpaper.png",NoteDesk.CloudsWallpaper.png /out:$interactionExe $refs $sources (Join-Path $PSScriptRoot 'InteractionTests.cs')
+if($LASTEXITCODE -ne 0){throw 'Interaction test compilation failed'}
+& $interactionExe
+if($LASTEXITCODE -ne 0){throw 'Interaction tests failed'}
+
+$opacityExe=Join-Path $qaRoot 'NoteTransparencyTests.exe'
+& $compiler /nologo /target:exe /main:NoteTransparencyTests /codepage:65001 /resource:"$projectRoot\assets\CloudsWallpaper.png",NoteDesk.CloudsWallpaper.png /out:$opacityExe $refs $sources (Join-Path $PSScriptRoot 'NoteTransparencyTests.cs')
+if($LASTEXITCODE -ne 0){throw 'Note transparency test compilation failed'}
+& $opacityExe
+if($LASTEXITCODE -ne 0){throw 'Note transparency tests failed'}
+
+$designExe=Join-Path $qaRoot 'NoteDesignTests.exe'
+& $compiler /nologo /target:exe /main:NoteDesignTests /codepage:65001 /resource:"$projectRoot\assets\CloudsWallpaper.png",NoteDesk.CloudsWallpaper.png /out:$designExe $refs $sources (Join-Path $PSScriptRoot 'NoteDesignTests.cs')
+if($LASTEXITCODE -ne 0){throw 'Note design test compilation failed'}
+& $designExe
+if($LASTEXITCODE -ne 0){throw 'Note design tests failed'}

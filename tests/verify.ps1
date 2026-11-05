@@ -1,4 +1,4 @@
-param([string]$BuildDirectory='')
+param([string]$BuildDirectory='',[switch]$SkipDesktop)
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path $PSScriptRoot
 if([string]::IsNullOrWhiteSpace($BuildDirectory)){$BuildDirectory=Join-Path $projectRoot 'dist'}
@@ -7,7 +7,7 @@ Push-Location $projectRoot
 try {
     & (Join-Path $projectRoot 'build.ps1') -OutputDirectory $BuildDirectory
     & (Join-Path $PSScriptRoot 'run.ps1')
-    & (Join-Path $PSScriptRoot 'run.ps1') '--desktop'
+    if(-not $SkipDesktop){& (Join-Path $PSScriptRoot 'run.ps1') '--desktop'}
     $qaRoot=Join-Path $projectRoot '.qa'
     $cases=@(
         @{Name='model';Args=@('--self-test');Result='test-results.txt'},

@@ -12,7 +12,7 @@ public sealed class WallpaperPreferences:StackPanel {
     void Build() {
         Children.Clear();
         var title=UI.Text("壁纸与玻璃",17,UI.Ink);title.FontWeight=FontWeights.SemiBold;Children.Add(title);
-        var explanation=UI.Text("管理窗口使用壁纸；桌面便签保持桌面磨砂。",12,UI.Muted);explanation.Margin=new Thickness(0,6,0,12);Children.Add(explanation);
+        var explanation=UI.Text("管理窗口使用壁纸；桌面便签透出实际桌面。",12,UI.Muted);explanation.Margin=new Thickness(0,6,0,12);Children.Add(explanation);
         if(!DesktopGlass.EffectsAllowed){var fallback=UI.Text("系统已关闭透明效果，浮层暂用实色；调节参数仍会保存。",12,UI.Muted);fallback.Margin=new Thickness(0,0,0,12);Children.Add(fallback);}
         string warning;var bitmap=WallpaperFiles.Load(app.Store.Root,app.Store.Data.WallpaperPath,out warning);
         var preview=new Border {Height=105,CornerRadius=new CornerRadius(10),ClipToBounds=true,Background=new ImageBrush(bitmap) {Stretch=Stretch.UniformToFill,AlignmentY=AlignmentY.Bottom},Margin=new Thickness(0,0,0,12)};Children.Add(preview);

@@ -215,6 +215,9 @@ public sealed class GlassSurface:Grid {
     readonly Border tint=new Border {IsHitTestVisible=false};
     readonly Border rim=new Border {BorderThickness=new Thickness(1),IsHitTestVisible=false};
     readonly Border host=new Border();
+    readonly SolidColorBrush tintBrush=new SolidColorBrush();
+    readonly DropShadowEffect shadow=new DropShadowEffect {Color=Color.FromRgb(19,29,54),BlurRadius=18,ShadowDepth=4};
+    bool? rimDark,rimContrast;
     double radius=18;
     public UIElement Content {get{return host.Child;}set{host.Child=value;}}
     public Thickness Padding {get{return host.Padding;}set{host.Padding=value;}}
@@ -238,15 +241,20 @@ public sealed class GlassSurface:Grid {
     public void Refresh() {
         var corners=new CornerRadius(radius);tint.CornerRadius=shade.CornerRadius=rim.CornerRadius=host.CornerRadius=corners;
         var color=((SolidColorBrush)UI.Hex("#FAF9F6")).Color;color.A=(byte)Math.Round(scene.PanelOpacity*255);
-        tint.Background=new SolidColorBrush(color);
-        tint.Effect=scene.UseEffects?new DropShadowEffect {Color=Color.FromRgb(19,29,54),BlurRadius=18,ShadowDepth=4,Opacity=UI.IsDark?.22:.12}:null;
+        if(tintBrush.Color!=color)tintBrush.Color=color;
+        if(tint.Background!=tintBrush)tint.Background=tintBrush;
+        shadow.Opacity=UI.IsDark?.22:.12;
+        if(tint.Effect!=(scene.UseEffects?shadow:null))tint.Effect=scene.UseEffects?shadow:null;
         WallpaperScene.SetShade(shade,scene.Brightness);
         backdrop.Source=scene.Blurred;backdrop.Width=Math.Max(1,scene.SceneSize.Width);backdrop.Height=Math.Max(1,scene.SceneSize.Height);
         sample.Visibility=shade.Visibility=scene.UseEffects?Visibility.Visible:Visibility.Hidden;
+        if(rimDark!=UI.IsDark||rimContrast!=SystemParameters.HighContrast) {
+        rimDark=UI.IsDark;rimContrast=SystemParameters.HighContrast;
         rim.BorderBrush=SystemParameters.HighContrast?UI.Line:new LinearGradientBrush(new GradientStopCollection {
             new GradientStop(UI.IsDark?Color.FromArgb(68,238,211,244):Color.FromArgb(194,255,255,255),0),
             new GradientStop(UI.IsDark?Color.FromArgb(40,151,176,226):Color.FromArgb(100,198,200,229),.55),
             new GradientStop(Color.FromArgb(UI.IsDark?(byte)58:(byte)138,234,178,218),1)},45);
+        }
         PositionSample();
     }
 }

@@ -1,6 +1,6 @@
 ﻿# NoteDesk
 
-当前版本：**v1.2.1** · [下载最新版](https://github.com/LKlingkong/NoteDesk/releases/tag/v1.2.1) · [更新日志](RELEASE_NOTES.md)
+当前源码版本：**v1.2.2** · [下载最新版](https://github.com/LKlingkong/NoteDesk/releases/latest) · [更新日志](RELEASE_NOTES.md)
 
 一款 Windows 桌面便签：让想法停靠，让小事完成。
 
@@ -12,7 +12,7 @@
 
 ## 壁纸与玻璃浮层（v1.2.0）
 
-管理和设置窗口采用「底层壁纸 + 分离玻璃浮层」：云朵壁纸从四周、卡片间隙和空白处露出，导航、搜索、便签卡片、状态栏与顶部窗口按钮使用同一坐标下的局部模糊。文字与按钮保持清晰。桌面上的独立便签继续透出实际桌面。
+管理和设置窗口采用「底层壁纸 + 分离玻璃浮层」：云朵壁纸从四周、卡片间隙和空白处露出，导航、搜索、便签卡片、状态栏与顶部窗口按钮使用同一坐标下的局部模糊。文字与按钮保持清晰。桌面上的独立便签使用逐像素透明，透出实际桌面。
 
 用户提供的蓝天粉云图片已原样嵌入 `NoteDesk.exe`，移动或单独复制 EXE 后仍可使用，无需附带壁纸文件。默认按比例铺满窗口、靠下居中；在「设置与备份 → 壁纸与玻璃」可以更换图片，调整模糊程度、浮层不透明度和壁纸明暗，并展开「调整壁纸位置」微调构图。默认 **25 px 模糊、60% 不透明度和 80% 明暗**。新默认值用于首次运行、旧数据缺少这些设置时及「恢复默认」；已有自定义参数继续保留。调节即时预览，稍后自动保存。
 
@@ -38,7 +38,7 @@
 
 ## 便签与完成
 
-- 每张便签可独立置顶、隐藏、换色及调整背景透明度；只改变背景透明度，文字保持清晰。在支持的 Windows 11 上使用原生 Acrylic 磨砂背景；系统关闭透明效果、开启高对比度或原生效果不可用时使用清晰的实色背景。
+- 每张便签可独立置顶、隐藏、换色，并在菜单调整 25%–100% 背景不透明度；百分比越低越透明，文字与按钮保持清晰。便签采用逐像素透明，避免原生 Acrylic 底层遮挡调节结果；高对比度模式使用实色并明确提示。
 - 普通文字与待办混排，只有包含待办的便签才显示进度条。
 - 点击待办圆圈后，以简短勾选、淡出和进度反馈确认完成；已完成内容收进可展开区域。键盘操作即时响应，并尊重 Windows 关闭动画的设置。
 - 勾选最后一条待办后停留约 3 秒，自动归档；弹出 8 秒的撤销入口。管理窗口也能撤销最近一次操作。
@@ -107,4 +107,12 @@ Get-Content (Join-Path ($qa + '-ui') 'integration-results.txt')
 
 ## 打包发布
 
-完整验证后运行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 1.2.1`，生成 `dist/release-v1.2.1` 中的 EXE、包含源码的 Windows 完整包、校验文件和预览。GitHub 的 Release 更新说明在 `docs/releases/v1.2.1.md`。打包脚本不会自动推送或发布。
+完整验证后运行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 1.2.2`，生成 `dist/release-v1.2.2` 中的 EXE、包含源码的 Windows 完整包、校验文件和预览。GitHub 的 Release 更新说明在 `docs/releases/v1.2.2.md`。打包脚本不会自动推送或发布。
+
+## v1.2.2 便签与交互
+
+便签采用 16px 圆角、独立外部阴影、常驻矢量工具栏和五色直接选择。背景不透明度支持 25%–100%，文字不随之变淡；已修复窗口底色与 Acrylic 遮挡调节结果的问题。待办使用矢量勾选与细分隔线，固定底部输入区，纯文本隐藏进度。置顶和换色保留编辑选区。
+
+搜索支持 Ctrl+F 与 Esc 清空，提醒表单支持 Enter 保存与 Esc 取消。验证命令可加 -SkipDesktop，跳过真实桌面按键注入。
+
+详细记录：[透明度修复](docs/note-transparency-fix.md)、[透明纸笺设计](docs/note-paper-design.md)、[交互与动画](docs/interaction-polish.md)。
