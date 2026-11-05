@@ -8,7 +8,7 @@ namespace NoteDesk {
 public sealed class WallpaperPreferences:StackPanel {
     readonly DeskApp app;
     public WallpaperPreferences(DeskApp app){this.app=app;Margin=new Thickness(0,0,0,28);Build();}
-    public static void ResetDefaults(Database data) {data.WallpaperPath="";data.GlassBlur=24;data.GlassOpacity=.86;data.WallpaperBrightness=.85;data.WallpaperX=.5;data.WallpaperY=1;}
+    public static void ResetDefaults(Database data) {data.WallpaperPath="";data.GlassBlur=25;data.GlassOpacity=.60;data.WallpaperBrightness=.80;data.WallpaperX=.5;data.WallpaperY=1;}
     void Build() {
         Children.Clear();
         var title=UI.Text("壁纸与玻璃",17,UI.Ink);title.FontWeight=FontWeights.SemiBold;Children.Add(title);

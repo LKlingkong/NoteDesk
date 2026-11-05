@@ -1,6 +1,6 @@
 ﻿# NoteDesk
 
-当前源码版本：**v1.2.0** · [已发布版本](https://github.com/LKlingkong/NoteDesk/releases) · [更新日志](RELEASE_NOTES.md)
+当前版本：**v1.2.1** · [下载最新版](https://github.com/LKlingkong/NoteDesk/releases/tag/v1.2.1) · [更新日志](RELEASE_NOTES.md)
 
 一款 Windows 桌面便签：让想法停靠，让小事完成。
 
@@ -14,7 +14,7 @@
 
 管理和设置窗口采用「底层壁纸 + 分离玻璃浮层」：云朵壁纸从四周、卡片间隙和空白处露出，导航、搜索、便签卡片、状态栏与顶部窗口按钮使用同一坐标下的局部模糊。文字与按钮保持清晰。桌面上的独立便签继续透出实际桌面。
 
-用户提供的蓝天粉云图片已原样嵌入 `NoteDesk.exe`，移动或单独复制 EXE 后仍可使用，无需附带壁纸文件。默认按比例铺满窗口、靠下居中；在「设置与备份 → 壁纸与玻璃」可以更换图片，调整模糊程度、浮层不透明度和壁纸明暗，并展开「调整壁纸位置」微调构图。默认 24 px 模糊、86% 不透明度和 85% 明暗，优先保证阅读。调节即时预览，稍后自动保存。
+用户提供的蓝天粉云图片已原样嵌入 `NoteDesk.exe`，移动或单独复制 EXE 后仍可使用，无需附带壁纸文件。默认按比例铺满窗口、靠下居中；在「设置与备份 → 壁纸与玻璃」可以更换图片，调整模糊程度、浮层不透明度和壁纸明暗，并展开「调整壁纸位置」微调构图。默认 **25 px 模糊、60% 不透明度和 80% 明暗**。新默认值用于首次运行、旧数据缺少这些设置时及「恢复默认」；已有自定义参数继续保留。调节即时预览，稍后自动保存。
 
 「恢复默认」仅恢复壁纸与材质参数，保留便签、主题与快捷键。浅色、深色与跟随系统均可使用。Windows 关闭透明效果时，浮层使用实色；高对比度模式使用系统配色。
 
@@ -65,7 +65,7 @@
 
 ## 构建与验证
 
-代码在 `src/NoteDesk.cs`，使用 C# / WPF 与系统托盘，无第三方运行依赖。可使用 .NET Framework 自带编译器构建：
+代码按职责放在 `src/`，使用 C# / WPF 与系统托盘，无第三方运行依赖。目录与发布流程见 [项目说明](docs/README.md)。可使用 .NET Framework 自带编译器构建：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
@@ -104,3 +104,7 @@ Get-Content (Join-Path ($qa + '-ui') 'integration-results.txt')
 运行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\verify.ps1`：构建后依次验证兼容旧数据、原生快捷键冲突/换键/停用/释放、真实按键创建与正文焦点、长按去重、快捷键录制、主题切换保留输入和光标、小工作区窗口边界、无透明效果回退，验证嵌入壁纸、图片导入/修复/大小边界、裁切、局部模糊像素对齐、滚动、缓存限制、材质保存/恢复默认、标题栏与任务栏边界，再运行已有模型与集成测试并生成浅色/深色全页面截图。测试数据在 `.qa` 和独立临时目录，验证记录在 `dist/validation.txt`。原生全局按键测试需要普通交互式 Windows 桌面环境。
 
 `--render-preview --appearance light|dark --data-root <独立测试目录>` 可分别生成两套主题截图。物理多显示器混合 DPI、高对比度各系统配色及长时间休眠尚未全面实测。
+
+## 打包发布
+
+完整验证后运行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 1.2.1`，生成 `dist/release-v1.2.1` 中的 EXE、包含源码的 Windows 完整包、校验文件和预览。GitHub 的 Release 更新说明在 `docs/releases/v1.2.1.md`。打包脚本不会自动推送或发布。

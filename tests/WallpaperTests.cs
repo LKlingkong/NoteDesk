@@ -16,8 +16,11 @@ public static class WallpaperTests {
             Assert(path!=null,"wallpaper settings are missing");
             var data=Store.Json.Deserialize<Database>("{\"Schema\":1,\"Notes\":[],\"Sound\":true}");
             Assert(string.IsNullOrEmpty((string)path.GetValue(data)),"legacy JSON uses embedded wallpaper");
-            Assert((double)typeof(Database).GetField("GlassOpacity").GetValue(data)==.86,"reading-first default opacity");
-            Assert((double)typeof(Database).GetField("GlassBlur").GetValue(data)==24,"default blur");
+            Assert((double)typeof(Database).GetField("GlassOpacity").GetValue(data)==.60,"default opacity is 60 percent");
+            Assert((double)typeof(Database).GetField("GlassBlur").GetValue(data)==25,"default blur is 25 px");
+            Assert(data.WallpaperBrightness==.80,"default brightness is 80 percent");
+            var saved=Store.Json.Deserialize<Database>("{\"Schema\":1,\"Notes\":[],\"GlassBlur\":24,\"GlassOpacity\":0.86,\"WallpaperBrightness\":0.85}");
+            Assert(saved.GlassBlur==24&&saved.GlassOpacity==.86&&saved.WallpaperBrightness==.85,"existing saved material values are preserved");
             Assert((double)typeof(Database).GetField("WallpaperY").GetValue(data)==1,"wallpaper aligned to bottom");
             using(var resource=typeof(Note).Assembly.GetManifestResourceStream("NoteDesk.CloudsWallpaper.png"))Assert(resource!=null,"portable executable embeds default wallpaper");
             var geometry=typeof(Note).Assembly.GetType("NoteDesk.WallpaperGeometry");
@@ -40,7 +43,8 @@ public static class WallpaperTests {
             using(var oversized=File.Create(source))oversized.SetLength(32L*1024*1024+1);Assert(!WallpaperFiles.Import(root,source,out managed,out error)&&managed==null,"oversized image rejected before decoding");
             Assert(typeof(Note).Assembly.GetType("NoteDesk.WallpaperScene")!=null,"aligned glass scene is missing");
             var app=new DeskApp(Path.Combine(root,"scene"),true);UI.ApplyAppearance("light");
-            Assert(Contrast(((SolidColorBrush)UI.Muted).Color,Color.FromRgb(211,211,213))>=4.5,"secondary text stays readable on default glass over dark wallpaper");
+            Assert(Contrast(((SolidColorBrush)UI.Muted).Color,Color.FromRgb(211,211,213))>=4.5,"secondary text stays readable on higher-opacity glass");
+            Assert(Contrast(((SolidColorBrush)UI.Ink).Color,Color.FromRgb(147,147,148))>=4.5,"primary text stays readable at the new 60 percent default");
             byte[] pixels=new byte[1024*512*4];for(int yy=0;yy<512;yy++)for(int xx=0;xx<1024;xx++){int index=(yy*1024+xx)*4;pixels[index]=(byte)(((xx/8+yy/8)%2)*255);pixels[index+1]=(byte)(yy/2);pixels[index+2]=(byte)(xx/4);pixels[index+3]=255;}
             var image=BitmapSource.Create(1024,512,96,96,PixelFormats.Bgra32,null,pixels,1024*4);var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(image));using(var output=File.Create(source))png.Save(output);
             Assert(WallpaperFiles.Import(app.Store.Root,source,out managed,out error),"synthetic gradient import");
@@ -71,7 +75,7 @@ public static class WallpaperTests {
             var persisted=new Store(app.Store.Root).Data;Assert(persisted.GlassBlur==33&&persisted.GlassOpacity==.79&&persisted.WallpaperX==.2,"material settings persist");
             app.Store.Data.Appearance="dark";app.Store.Data.HotkeyEnabled=false;app.Store.Data.Notes.Add(new Note {Title="keep me"});
             WallpaperPreferences.ResetDefaults(app.Store.Data);
-            Assert(app.Store.Data.WallpaperPath==""&&app.Store.Data.GlassBlur==24&&app.Store.Data.GlassOpacity==.86&&app.Store.Data.WallpaperY==1,"reset restores wallpaper and material defaults");
+            Assert(app.Store.Data.WallpaperPath==""&&app.Store.Data.GlassBlur==25&&app.Store.Data.GlassOpacity==.60&&app.Store.Data.WallpaperBrightness==.80&&app.Store.Data.WallpaperY==1,"reset restores wallpaper and material defaults");
             Assert(app.Store.Data.Appearance=="dark"&&!app.Store.Data.HotkeyEnabled&&app.Store.Data.Notes.Count==1,"reset preserves notes, theme and shortcut");
             var recoveryRoot=Path.Combine(root,"recovery");string recoverPath;Assert(WallpaperFiles.Import(recoveryRoot,source,out recoverPath,out error),"prepare recovery image");
             File.WriteAllText(WallpaperFiles.Resolve(recoveryRoot,recoverPath),"broken managed image");Assert(WallpaperFiles.Import(recoveryRoot,source,out recoverPath,out error),"reimport original image");

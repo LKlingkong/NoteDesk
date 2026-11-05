@@ -8,5 +8,12 @@ $outputExe = Join-Path $OutputDirectory "NoteDesk.exe"
 $sources = @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.cs' | ForEach-Object FullName)
 & $compiler /nologo /target:winexe /platform:anycpu /optimize+ /codepage:65001 /win32icon:"$PSScriptRoot\assets\NoteDesk.ico" /resource:"$PSScriptRoot\assets\CloudsWallpaper.png",NoteDesk.CloudsWallpaper.png /out:"$outputExe" $refs $sources
 if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
+$inputHashes = [ordered]@{}
+foreach ($inputPath in @($sources) + @((Join-Path $PSScriptRoot 'assets\NoteDesk.ico'), (Join-Path $PSScriptRoot 'assets\CloudsWallpaper.png'), $PSCommandPath)) {
+    $relative = $inputPath.Substring($PSScriptRoot.Length + 1).Replace('\','/')
+    $inputHashes[$relative] = (Get-FileHash -LiteralPath $inputPath -Algorithm SHA256).Hash
+}
+[ordered]@{version=(Get-Item -LiteralPath $outputExe).VersionInfo.FileVersion; executableSha256=(Get-FileHash -LiteralPath $outputExe -Algorithm SHA256).Hash; inputs=$inputHashes} |
+    ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'build-manifest.json') -Encoding UTF8
 Write-Output "Built $outputExe"
 

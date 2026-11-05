@@ -127,8 +127,8 @@ public sealed class WallpaperScene:Grid {
     public BitmapSource Blurred {get{return blurred;}}
     public Size SceneSize {get;private set;}
     public bool UseEffects {get{return useEffects;}}
-    public double PanelOpacity {get{return UseEffects?WallpaperGeometry.Limit(store.Data.GlassOpacity,.5,.96,.86):1;}}
-    public double Brightness {get{return WallpaperGeometry.Limit(store.Data.WallpaperBrightness,.4,1.2,.85);}}
+    public double PanelOpacity {get{return UseEffects?WallpaperGeometry.Limit(store.Data.GlassOpacity,.5,.96,.60):1;}}
+    public double Brightness {get{return WallpaperGeometry.Limit(store.Data.WallpaperBrightness,.4,1.2,.80);}}
     public WallpaperScene(Store store):this(store,()=>DesktopGlass.EffectsAllowed){}
     public WallpaperScene(Store store,Func<bool> effects) {
         this.store=store;this.effects=effects;ClipToBounds=true;Background=UI.Hex("#FAF9F6");
@@ -182,7 +182,7 @@ public sealed class WallpaperScene:Grid {
     void BuildBlur() {
         if(!UseEffects){blurred=null;return;}
         if(source==null||SceneSize.Width<=0||SceneSize.Height<=0)return;
-        double radius=WallpaperGeometry.Limit(store.Data.GlassBlur,0,48,24);
+        double radius=WallpaperGeometry.Limit(store.Data.GlassBlur,0,48,25);
         double x=WallpaperGeometry.Limit(store.Data.WallpaperX,0,1,.5),y=WallpaperGeometry.Limit(store.Data.WallpaperY,0,1,1);
         if(blurred!=null&&cacheSize==SceneSize&&cacheBlur==radius&&cacheX==x&&cacheY==y)return;
         double scale=Math.Min(1,1280/Math.Max(SceneSize.Width,SceneSize.Height));
