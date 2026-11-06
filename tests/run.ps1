@@ -34,3 +34,9 @@ $designExe=Join-Path $qaRoot 'NoteDesignTests.exe'
 if($LASTEXITCODE -ne 0){throw 'Note design test compilation failed'}
 & $designExe
 if($LASTEXITCODE -ne 0){throw 'Note design tests failed'}
+
+$petMagnetExe=Join-Path $qaRoot 'PetAndMagnetTests.exe'
+& $compiler /nologo /target:exe /main:PetAndMagnetTests /codepage:65001 /resource:"$projectRoot\assets\CloudsWallpaper.png",NoteDesk.CloudsWallpaper.png /out:$petMagnetExe $refs $sources (Join-Path $PSScriptRoot 'PetAndMagnetTests.cs')
+if($LASTEXITCODE -ne 0){throw 'Pet and magnet test compilation failed'}
+& $petMagnetExe
+if($LASTEXITCODE -ne 0){throw 'Pet and magnet tests failed'}

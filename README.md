@@ -1,8 +1,25 @@
 ﻿# NoteDesk
 
-当前源码版本：**v1.2.2** · [下载最新版](https://github.com/LKlingkong/NoteDesk/releases/latest) · [更新日志](RELEASE_NOTES.md)
+当前源码版本 **v1.3.0** · [下载最新版](https://github.com/LKlingkong/NoteDesk/releases/latest) · [更新日志](RELEASE_NOTES.md)
 
 一款 Windows 桌面便签：让想法停靠，让小事完成。
+
+## 桌宠与便签磁吸
+
+- 在「设置与备份 → 桌宠」导入并启用桌宠。默认选项是 HanaAyane 的小蕾米，可从官方仓库导入。已有桌宠包可选择解压后的 `pet.json`，同目录放置图集。也可选择单张 PNG。
+- 其他公开 GitHub 桌宠可填写仓库首页地址。有多个桌宠包时，填写包含 `pet.json` 的资源目录。动态桌宠使用 Codex v2 的 1536 × 2288 图集，WebP 解码由 Windows 提供。
+- 桌宠可拖动，位置及置顶偏好保存在本机。可在桌宠设置中开启沿当前显示器底边走动。托盘提供显隐和临时鼠标穿透，穿透时提醒气泡仍可点击。
+- 勾完一张便签的最后一项时，桌宠播放庆祝动作。当前桌宠可用时优先显示提醒气泡，支持打开便签或稍后提醒。桌宠不可用时显示原提醒窗口。
+- 拖动便签靠近显示器工作区或可见窗口的边缘时自动对齐。按住 Alt 可临时自由拖动。
+
+新的导入来源可实现 `src/PetSources.cs` 中的 `IPetSource.Load()`，提供名称、ID、图像字节、来源及动画标记。各来源共用校验、保存和播放流程。小蕾米素材遵循上游使用说明。[上游仓库](https://github.com/HanaAyane/remielle-codex-pet) · [素材说明](https://github.com/HanaAyane/remielle-codex-pet/blob/main/ASSET-USAGE.md)
+
+已有 Coopanion 源码时，可以用 `scripts/export-whale-pet.py` 将本地大肥鱼默认造型转换成透明 PNG 图集。转换需要 Python 3.9+ 和 Pillow。转换后在桌宠设置中选择生成的 `pet.json`，日常运行只需 NoteDesk。发布包提供转换脚本，大肥鱼贴图由用户从本地素材生成。[Coopanion 仓库](https://github.com/Pal-AI-Lab/Coopanion) · [素材声明](https://github.com/Pal-AI-Lab/Coopanion/blob/main/packages/cortico-world-desktop-pet/THIRD_PARTY_NOTICES.md)
+
+```powershell
+python -m pip install Pillow
+python .\scripts\export-whale-pet.py "路径\Coopanion\packages\cortico-world-desktop-pet\web\whale\figure.json" ".\dist\whale"
+```
 
 ## 运行
 
@@ -47,7 +64,7 @@
 
 ## 提醒
 
-支持一次性提醒、自定义提前分钟数，以及 10 / 30 / 60 分钟稍后提醒。后台便签也可以弹出提醒卡片。多个到期事项在一次提醒窗口中汇总；不会抢走键盘焦点。已完成或归档的事项不再生成新提醒。关闭提醒卡片代表本次提醒已阅，不会反复弹出。
+支持一次性提醒、自定义提前分钟数，以及 10 / 30 / 60 分钟稍后提醒。后台便签也能提醒。多个到期事项在桌宠气泡里依次显示，或在原提醒窗口中汇总。已完成或归档的事项不再生成新提醒。关闭气泡或提醒窗口只收起本次提示。
 
 软件必须运行才会提醒。关机、休眠或退出期间错过的提醒，在重新启动或唤醒后检查。可在设置里开启「登录 Windows 后自动启动」，默认关闭。程序移动位置后，请重新关闭再开启此选项以更新路径。
 

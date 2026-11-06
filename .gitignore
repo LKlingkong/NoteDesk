@@ -3,3 +3,4 @@ qa-path.txt
 *.tmp
 *.log
 .qa/
+/Coopanion-main/

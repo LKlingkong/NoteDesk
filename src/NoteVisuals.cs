@@ -8,6 +8,7 @@ using System.Windows.Shapes;
 
 namespace NoteDesk {
 public static class NoteVisuals {
+ public const double PaperMargin = 8;
  public static Path Icon(string name,double size=15) {
   string data=name=="pin"?"M6,2 L12,2 M7,2 L7,7 4,10 4,12 14,12 14,10 11,7 11,2 M9,12 L9,17":name=="close"?"M4,4 L14,14 M14,4 L4,14":name=="plus"?"M9,3 L9,15 M3,9 L15,9":name=="check"?"M3,9 L7,13 15,4":"M3,9 L3.1,9 M9,9 L9.1,9 M15,9 L15.1,9";
   var icon=new Path {Data=Geometry.Parse(data),Width=size,Height=size,Stretch=Stretch.Uniform,StrokeThickness=name=="more"?2.5:1.5,StrokeStartLineCap=PenLineCap.Round,StrokeEndLineCap=PenLineCap.Round,StrokeLineJoin=PenLineJoin.Round,IsHitTestVisible=false};
@@ -28,9 +29,14 @@ public static class NoteVisuals {
 }
 // Shadow is clipped to the space outside the paper. It cannot darken the alpha-controlled body.
 public sealed class NoteShadow:Grid {
- public NoteShadow(){IsHitTestVisible=false;Children.Add(new Border {Margin=new Thickness(8),CornerRadius=new CornerRadius(16),Background=Brushes.Black,Effect=new DropShadowEffect {BlurRadius=14,ShadowDepth=2,Opacity=.14,Color=Color.FromRgb(16,24,40)}});}
+ public NoteShadow(){IsHitTestVisible=false;Children.Add(new Border {Margin=new Thickness(NoteVisuals.PaperMargin),CornerRadius=new CornerRadius(16),Background=Brushes.Black,Effect=new DropShadowEffect {BlurRadius=14,ShadowDepth=2,Opacity=.14,Color=Color.FromRgb(16,24,40)}});}
  protected override Size ArrangeOverride(Size size) {
-  var outside=new RectangleGeometry(new Rect(size),16,16);var inside=new RectangleGeometry(new Rect(8,8,Math.Max(0,size.Width-16),Math.Max(0,size.Height-16)),16,16);Clip=new CombinedGeometry(GeometryCombineMode.Exclude,outside,inside);return base.ArrangeOverride(size);
+  double margin = NoteVisuals.PaperMargin;
+  var outside = new RectangleGeometry(new Rect(size), 16, 16);
+  var inside = new RectangleGeometry(new Rect(margin, margin, Math.Max(0, size.Width - 2 * margin),
+      Math.Max(0, size.Height - 2 * margin)), 16, 16);
+  Clip = new CombinedGeometry(GeometryCombineMode.Exclude, outside, inside);
+  return base.ArrangeOverride(size);
  }
 }
 }

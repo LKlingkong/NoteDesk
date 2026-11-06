@@ -19,8 +19,8 @@ using Forms = System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("NoteDesk")]
 [assembly: System.Reflection.AssemblyProduct("NoteDesk")]
 [assembly: System.Reflection.AssemblyDescription("Windows desktop sticky notes and interactive to-do reminders")]
-[assembly: System.Reflection.AssemblyVersion("1.2.2.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.2.2.0")]
+[assembly: System.Reflection.AssemblyVersion("1.3.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.3.0.0")]
 
 namespace NoteDesk {
 public class TaskItem {
@@ -106,6 +106,13 @@ public static class UI {
  public static string DateLabel(string value) { var d=Store.Parse(value); return d.HasValue?d.Value.ToString("MM/dd HH:mm"):""; }
 }
 public class DeskApp:Application {
+ PetController pets;
+ internal PetController Pets {
+  get {
+   if(pets==null)pets=new PetController(this);
+   return pets;
+  }
+ }
  public Store Store; public Manager Manager; public Dictionary<string,NoteWindow> OpenNotes=new Dictionary<string,NoteWindow>();
  Forms.NotifyIcon tray; DispatcherTimer tick; Dictionary<string,DispatcherTimer> archiveTimers=new Dictionary<string,DispatcherTimer>(); public bool Exiting; public Action UndoAction; public string Toast=""; public bool Preview; internal bool Headless; GlobalHotkey hotkey; DispatcherTimer wallpaperSave; public string HotkeyError; int createdSequence;
  public DeskApp(string root,bool preview) { Preview=preview; Store=new Store(root); ShutdownMode=ShutdownMode.OnExplicitShutdown; UI.Theme(this); UI.AppearanceChanged+=AppearanceChanged; SystemEvents.UserPreferenceChanged+=SystemPreferencesChanged; SystemParameters.StaticPropertyChanged+=SystemParametersChanged; }
@@ -113,9 +120,14 @@ public class DeskApp:Application {
   Manager=new Manager(this); MainWindow=Manager;
   if(!Preview){hotkey=new GlobalHotkey(()=>NewNote());string error;if(!hotkey.TryConfigure(Store.Data.HotkeyEnabled,Store.Data.HotkeyModifiers,Store.Data.HotkeyKey,out error)){HotkeyError=error;Toast="新建快捷键未启用："+error;Manager.Refresh();}}
   if(!Preview) { tray=new Forms.NotifyIcon {Icon=System.Drawing.Icon.ExtractAssociatedIcon(System.Reflection.Assembly.GetExecutingAssembly().Location),Text="NoteDesk · 留住每一个小小的完成",Visible=true}; var menu=new Forms.ContextMenuStrip();
-   menu.Items.Add("新建便签",null,(s,e)=>Dispatcher.Invoke(new Action(()=>NewNote()))); menu.Items.Add("管理便签",null,(s,e)=>Dispatcher.Invoke(new Action(ShowManager))); menu.Items.Add("退出 NoteDesk",null,(s,e)=>Dispatcher.Invoke(new Action(Quit))); tray.ContextMenuStrip=menu; tray.DoubleClick+=(s,e)=>Dispatcher.Invoke(new Action(ShowManager)); }
+   menu.Items.Add("新建便签",null,(s,e)=>Dispatcher.Invoke(new Action(()=>NewNote()))); menu.Items.Add("管理便签",null,(s,e)=>Dispatcher.Invoke(new Action(ShowManager))); menu.Items.Add("显示或隐藏桌宠",null,(s,e)=>Dispatcher.Invoke(new Action(Pets.ToggleVisibility))); var petPass = new Forms.ToolStripMenuItem("桌宠鼠标穿透");
+   petPass.Click += (s,e) => Dispatcher.Invoke(new Action(Pets.ToggleClickThrough));
+   menu.Opening += (s,e) => petPass.Checked = Pets.ClickThrough;
+   menu.Items.Add(petPass);
+   menu.Items.Add("退出 NoteDesk",null,(s,e)=>Dispatcher.Invoke(new Action(Quit))); tray.ContextMenuStrip=menu; tray.DoubleClick+=(s,e)=>Dispatcher.Invoke(new Action(ShowManager)); }
   foreach(var n in Store.Data.Notes.Where(n=>n.State=="active"&&n.Visible).ToList()) ShowNote(n);
   if(!Headless)Manager.Show(); if(Store.Warning!=null) MessageBox.Show(Store.Warning,"NoteDesk");
+  if(!Preview&&!Headless)Pets.Start();
   tick=new DispatcherTimer {Interval=TimeSpan.FromSeconds(2)}; tick.Tick+=(s,e)=>CheckReminders(); if(!Preview)tick.Start();
   foreach(var n in Store.Data.Notes.Where(n=>n.State=="active"&&n.PendingArchive&&n.Tasks.Count>0&&n.Tasks.All(t=>t.Done))) ScheduleArchive(n,null);
  }
@@ -134,10 +146,50 @@ public class DeskApp:Application {
  }
  public void CancelArchive(Note n) { n.PendingArchive=false; if(archiveTimers.ContainsKey(n.Id)) { archiveTimers[n.Id].Stop(); archiveTimers.Remove(n.Id); } }
  public void ScheduleArchive(Note n,TaskItem last) { CancelArchive(n); n.PendingArchive=true; Save(); var t=new DispatcherTimer {Interval=TimeSpan.FromSeconds(3)}; archiveTimers[n.Id]=t; t.Tick+=(s,e)=> { CancelArchive(n); if(n.State=="active"&&n.Tasks.Count>0&&n.Tasks.All(i=>i.Done))Archive(n,last); }; t.Start(); }
- public void Toggle(Note n,TaskItem task,bool done) { task.Done=done; if(!done)CancelArchive(n); Changed(n); if(done&&Store.Data.Sound)System.Media.SystemSounds.Asterisk.Play(); if(done&&n.Tasks.All(t=>t.Done))ScheduleArchive(n,task); }
+ public void Toggle(Note n,TaskItem task,bool done) {
+  bool last = done && !task.Done && n.Tasks.Contains(task) && n.Tasks.All(t => t == task || t.Done);
+  task.Done=done;
+  if(!done)CancelArchive(n);
+  Changed(n);
+  if(done&&Store.Data.Sound)System.Media.SystemSounds.Asterisk.Play();
+  if(last) {
+   ScheduleArchive(n,task);
+   if(pets!=null)pets.Celebrate();
+  }
+ }
  public void Delete(Note n) { CancelArchive(n); if(OpenNotes.ContainsKey(n.Id))OpenNotes[n.Id].Flush(); n.PreviousState=n.State; n.State="deleted"; if(OpenNotes.ContainsKey(n.Id))OpenNotes[n.Id].Hide(); Changed(n); Status("已移入回收站",()=>Restore(n)); }
  public void Restore(Note n) { bool fromArchive=n.State=="archived"; n.PendingArchive=false; n.State=n.State=="deleted"?n.PreviousState:"active"; if(n.State=="active") { n.Archived=null; if(fromArchive)foreach(var t in n.Tasks)t.Reminded=true; } Changed(n); if(n.State=="active")ShowNote(n); }
- public void CheckReminders() { var list=new List<Tuple<Note,TaskItem>>(); foreach(var n in Store.Data.Notes.Where(n=>n.State=="active"))foreach(var t in n.Tasks)if(Store.NeedsReminder(t,DateTime.Now)){t.Reminded=true;list.Add(Tuple.Create(n,t));} if(list.Count==0)return; Save(); new ReminderWindow(this,list).Show(); }
+ public void CheckReminders() {
+  var list=new List<Tuple<Note,TaskItem>>();
+  DateTime now=DateTime.Now;
+  foreach(var n in Store.Data.Notes.Where(n=>n.State=="active"))
+   foreach(var t in n.Tasks)
+    if(Store.NeedsReminder(t,now)) {
+     t.Reminded=true;
+     list.Add(Tuple.Create(n,t));
+    }
+  if(list.Count==0)return;
+  Save();
+  if(pets==null||!pets.TryRemind(list))new ReminderWindow(this,list).Show();
+ }
+ internal ContextMenu OpenSnoozeMenu(Button anchor,Note note,TaskItem task,Action dismiss) {
+  var menu=new ContextMenu();
+  foreach(int interval in new[]{10,30,60}) {
+   int minutes=interval;
+   var item=new MenuItem {Header=minutes+" 分钟后"};
+   item.Click+=(s,e)=>{
+    if(note.State=="active"&&note.Tasks.Contains(task)&&!task.Done&&task.Reminded) {
+     task.Snooze=DateTime.Now.AddMinutes(minutes).ToString("o");
+     task.Reminded=false;
+     Changed(note);
+    }
+    dismiss();
+   };
+   menu.Items.Add(item);
+  }
+  InteractionFeedback.OpenMenu(menu,anchor);
+  return menu;
+ }
  void AppearanceChanged(){foreach(var window in OpenNotes.Values)window.RefreshAppearance();if(Manager!=null){Manager.Wallpaper.RefreshSettings();Manager.Refresh();}}
  void SystemPreferencesChanged(object sender,UserPreferenceChangedEventArgs e){if(!Exiting)Dispatcher.BeginInvoke(new Action(()=>{if(!Exiting)UI.ApplyAppearance(Store.Data.Appearance);}));}
  void SystemParametersChanged(object sender,System.ComponentModel.PropertyChangedEventArgs e){if(e.PropertyName=="HighContrast")SystemPreferencesChanged(sender,null);}
@@ -148,7 +200,7 @@ public class DeskApp:Application {
  public void ResumeShortcut(){if(Exiting||hotkey==null)return;string error;if(!hotkey.TryConfigure(Store.Data.HotkeyEnabled,Store.Data.HotkeyModifiers,Store.Data.HotkeyKey,out error)){HotkeyError=error;Toast="新建快捷键未启用："+error;}}
  public bool ConfigureHotkey(bool enabled,int modifiers,int key,out string error){error=null;if(!GlobalHotkey.Valid(modifiers,key)){error="请使用 Ctrl、Alt 或 Win 组合键；F12 为系统保留键。";return false;}if(hotkey!=null&&!hotkey.TryConfigure(enabled,modifiers,key,out error))return false;Store.Data.HotkeyEnabled=enabled;Store.Data.HotkeyModifiers=modifiers;Store.Data.HotkeyKey=key;HotkeyError=null;Save();if(Manager!=null)Manager.UpdateShortcutHint();return true;}
  protected override void OnExit(ExitEventArgs e){if(wallpaperSave!=null)wallpaperSave.Stop();if(hotkey!=null)hotkey.Dispose();UI.AppearanceChanged-=AppearanceChanged;SystemEvents.UserPreferenceChanged-=SystemPreferencesChanged;SystemParameters.StaticPropertyChanged-=SystemParametersChanged;base.OnExit(e);}
- public void Quit() { foreach(var w in OpenNotes.Values)w.Flush(); Save(); Exiting=true; if(tick!=null)tick.Stop(); if(tray!=null)tray.Dispose(); Shutdown(); }
+ public void Quit() { foreach(var w in OpenNotes.Values)w.Flush(); Save(); Exiting=true; if(tick!=null)tick.Stop(); if(tray!=null)tray.Dispose(); if(pets!=null)pets.Dispose(); Shutdown(); }
 }
 public class NoteWindow:Window {
  DeskApp app; public Note N; Border surface; StackPanel tasks,complete; TextBox title,body,addInput; ProgressBar progress; TextBlock count,celebration,taskHeading,saveHint; NoteShadow shadow; DispatcherTimer debounce; bool building,expanded;
@@ -156,6 +208,7 @@ public class NoteWindow:Window {
   UI.WindowTheme(this);app=a;N=n;Title="NoteDesk · "+n.Title;Width=n.W;Height=n.H;MinWidth=Math.Min(300,n.W);MinHeight=Math.Min(380,n.H);WindowStyle=WindowStyle.None;AllowsTransparency=true;Background=Brushes.Transparent;ShowInTaskbar=false;ResizeMode=ResizeMode.NoResize;Topmost=n.Pinned;
   Left=Math.Max(SystemParameters.VirtualScreenLeft,Math.Min(n.X,SystemParameters.VirtualScreenLeft+SystemParameters.VirtualScreenWidth-100));Top=Math.Max(SystemParameters.VirtualScreenTop,Math.Min(n.Y,SystemParameters.VirtualScreenTop+SystemParameters.VirtualScreenHeight-80));
   debounce=new DispatcherTimer {Interval=TimeSpan.FromMilliseconds(1100)};debounce.Tick+=(s,e)=>Flush();
+  NoteMagnet.Attach(this);
   LocationChanged+=(s,e)=>{N.X=Left;N.Y=Top;Queue();};SizeChanged+=(s,e)=>{N.W=Width;N.H=Height;Queue();};Closing+=(s,e)=>{if(!app.Exiting){e.Cancel=true;app.HideNote(N);}};Rebuild();
  }
  void Queue(){if(building)return;if(saveHint!=null)saveHint.Text="稍后自动保存";debounce.Stop();debounce.Start();}
@@ -163,7 +216,7 @@ public class NoteWindow:Window {
  public void Rebuild(){
   building=true;
   var shell=new Grid();shadow=new NoteShadow();shell.Children.Add(shadow);
-  surface=new Border {Margin=new Thickness(8),CornerRadius=new CornerRadius(16),BorderBrush=UI.Hex("note-rim"),BorderThickness=new Thickness(1),Padding=new Thickness(20)};Tint();shell.Children.Add(surface);
+  surface=new Border {Margin=new Thickness(NoteVisuals.PaperMargin),CornerRadius=new CornerRadius(16),BorderBrush=UI.Hex("note-rim"),BorderThickness=new Thickness(1),Padding=new Thickness(20)};Tint();shell.Children.Add(surface);
   var grid=new Grid();grid.RowDefinitions.Add(new RowDefinition {Height=GridLength.Auto});grid.RowDefinitions.Add(new RowDefinition());grid.RowDefinitions.Add(new RowDefinition {Height=GridLength.Auto});surface.Child=grid;
   var header=new StackPanel();grid.Children.Add(header);
   var drag=new Grid {Background=Brushes.Transparent,Margin=new Thickness(-1,-4,-2,3)};drag.ColumnDefinitions.Add(new ColumnDefinition());drag.ColumnDefinitions.Add(new ColumnDefinition {Width=GridLength.Auto});
@@ -259,7 +312,7 @@ public class Manager:Window {
   var statusGlass=new GlassSurface(Wallpaper) {Content=statusrow,Radius=12,Padding=new Thickness(14,9,14,9),Margin=new Thickness(0,10,0,0)};Grid.SetRow(statusGlass,2);main.Children.Add(statusGlass);
   Closing+=(s,e)=>{searchDelay.Stop();if(!app.Exiting){e.Cancel=true;Hide();}};Refresh();
  }
- public void Refresh() { if(list==null)return;searchDelay.Stop();UpdateShortcutHint();foreach(var pair in navigation){bool selected=pair.Key==section;pair.Value.Background=selected?UI.Hex("#DFE7DD"):Brushes.Transparent;pair.Value.Foreground=selected?UI.Hex("#344F3D"):UI.Muted;pair.Value.FontWeight=selected?FontWeights.SemiBold:FontWeights.Normal;}heading.Text=section=="active"?"我的便签":section=="archived"?"时光归档":section=="deleted"?"回收站":"设置与备份";subtitle.Text=section=="active"?"给此刻的想法，一个轻轻落下的位置。":section=="archived"?"那些认真写下、慢慢完成的日子，都在这里。":section=="deleted"?"暂时放下的，也可以重新拾起。":"数据留在本机，记录由你掌握。";((Grid)search.Parent).Visibility=section=="settings"?Visibility.Collapsed:Visibility.Visible;Status.Text=string.IsNullOrEmpty(app.Toast)?"本地自动保存 · NoteDesk 1.2.2":app.Toast;undo.Visibility=app.UndoAction==null?Visibility.Collapsed:Visibility.Visible;stats.Text=app.Store.Data.Notes.Count(n=>n.State=="active")+" 张正在陪伴\n"+app.Store.Data.Notes.Count(n=>n.State=="archived")+" 张已收入时光";
+ public void Refresh() { if(list==null)return;searchDelay.Stop();UpdateShortcutHint();foreach(var pair in navigation){bool selected=pair.Key==section;pair.Value.Background=selected?UI.Hex("#DFE7DD"):Brushes.Transparent;pair.Value.Foreground=selected?UI.Hex("#344F3D"):UI.Muted;pair.Value.FontWeight=selected?FontWeights.SemiBold:FontWeights.Normal;}heading.Text=section=="active"?"我的便签":section=="archived"?"时光归档":section=="deleted"?"回收站":"设置与备份";subtitle.Text=section=="active"?"给此刻的想法，一个轻轻落下的位置。":section=="archived"?"那些认真写下、慢慢完成的日子，都在这里。":section=="deleted"?"暂时放下的，也可以重新拾起。":"数据留在本机，记录由你掌握。";((Grid)search.Parent).Visibility=section=="settings"?Visibility.Collapsed:Visibility.Visible;Status.Text=string.IsNullOrEmpty(app.Toast)?"本地自动保存 · NoteDesk " + typeof(Manager).Assembly.GetName().Version.ToString(3):app.Toast;undo.Visibility=app.UndoAction==null?Visibility.Collapsed:Visibility.Visible;stats.Text=app.Store.Data.Notes.Count(n=>n.State=="active")+" 张正在陪伴\n"+app.Store.Data.Notes.Count(n=>n.State=="archived")+" 张已收入时光";
  if(section=="settings"){if(renderedSection!="settings"){list.Children.Clear();Settings();}renderedSection=section;return;}renderedSection=section;list.Children.Clear();string query=search.Text??"";var items=app.Store.Data.Notes.Where(n=>n.State==section&&(n.Title+"\n"+n.Body+"\n"+string.Join("\n",n.Tasks.Select(t=>t.Text))).IndexOf(query,StringComparison.OrdinalIgnoreCase)>=0).OrderByDescending(n=>section=="archived"?n.Archived:n.Created).ToList();
  if(items.Count==0){var empty=new StackPanel {Margin=new Thickness(25,65,25,25)};empty.Children.Add(UI.Text(section=="archived"?"✦":"○",45,UI.Accent));empty.Children.Add(UI.Text(query.Length>0?"没有找到匹配的便签":section=="archived"?"完成的故事，会在这里相遇。":section=="deleted"?"这里干干净净。":"从一张便签，开始今天。",19,UI.Ink));if(section=="active"&&query.Length==0){var b=UI.Button("写下第一张便签",()=>app.NewNote(),true);b.HorizontalAlignment=HorizontalAlignment.Left;b.Margin=new Thickness(0,22,0,0);empty.Children.Add(b);}list.Children.Add(new GlassSurface(Wallpaper) {Content=empty,Padding=new Thickness(0,0,0,12)});return;}
  foreach(var n in items){var p=new StackPanel();var top=new Grid();top.ColumnDefinitions.Add(new ColumnDefinition());top.ColumnDefinitions.Add(new ColumnDefinition {Width=GridLength.Auto});var cardTitle=UI.Text(string.IsNullOrWhiteSpace(n.Title)?"未命名便签":n.Title,18,UI.Ink);cardTitle.FontWeight=FontWeights.SemiBold;cardTitle.MaxHeight=54;cardTitle.TextTrimming=TextTrimming.CharacterEllipsis;cardTitle.ToolTip=n.Title;cardTitle.Margin=new Thickness(0,0,12,0);top.Children.Add(cardTitle);var badge=UI.Text(section=="active"?(n.Visible?"桌面显示":"后台待命"):section=="archived"?"已归档":"待恢复",10,UI.Hex("#344F3D"));var badgeBox=new Border {Child=badge,Background=UI.Hex("#B8FFFFFF"),CornerRadius=new CornerRadius(6),Padding=new Thickness(9,5,9,5),VerticalAlignment=VerticalAlignment.Top};Grid.SetColumn(badgeBox,1);top.Children.Add(badgeBox);p.Children.Add(top);var excerpt=UI.Text(n.Body.Length>110?n.Body.Substring(0,110)+"…":n.Body,12,UI.Muted);excerpt.LineHeight=18;excerpt.MaxHeight=36;excerpt.TextTrimming=TextTrimming.CharacterEllipsis;excerpt.Margin=new Thickness(0,8,0,6);p.Children.Add(excerpt);
@@ -290,7 +343,7 @@ public class HistoryWindow:Window {
  }
 }
 public class ReminderWindow:Window {
- public ReminderWindow(DeskApp app,List<Tuple<Note,TaskItem>> items) {UI.WindowTheme(this);Title="NoteDesk · 到时间了";Width=400;Height=Math.Min(620,210+items.Count*135);WindowStyle=WindowStyle.ToolWindow;Topmost=true;ShowActivated=false;ShowInTaskbar=false;ResizeMode=ResizeMode.NoResize;Left=SystemParameters.WorkArea.Right-Width-22;Top=Math.Max(SystemParameters.WorkArea.Top+15,SystemParameters.WorkArea.Bottom-Height-22);var p=new StackPanel {Margin=new Thickness(22)};p.Children.Add(UI.Text(items.Count>1?items.Count+" 件事在等你":"到时间了，轻轻提醒你",21,UI.Ink));p.Children.Add(UI.Text("错过的提醒也会在这里汇合。",11,UI.Muted));Content=new ScrollViewer {Content=p};foreach(var pair in items){var n=pair.Item1;var t=pair.Item2;var box=new StackPanel {Margin=new Thickness(0,20,0,5)};p.Children.Add(box);box.Children.Add(UI.Text(t.Text,17,UI.Ink));box.Children.Add(UI.Text(n.Title+" · 截止 "+UI.DateLabel(t.Due),11,UI.Muted));var row=UI.Row();row.Margin=new Thickness(0,10,0,0);box.Children.Add(row);row.Children.Add(UI.Button("完成",()=>{if(n.State=="active"){app.Toggle(n,t,true);app.RefreshNote(n);}p.Children.Remove(box);if(p.Children.Count==2)Close();},true));Button snooze=null;snooze=UI.Button("稍后",()=>{var menu=new ContextMenu();foreach(var m in new[]{10,30,60}){int minutes=m;var i=new MenuItem {Header=m+" 分钟后"};i.Click+=(s,e)=>{if(n.State=="active"&&!t.Done){t.Snooze=DateTime.Now.AddMinutes(minutes).ToString("o");t.Reminded=false;app.Changed(n);}p.Children.Remove(box);if(p.Children.Count==2)Close();};menu.Items.Add(i);}InteractionFeedback.OpenMenu(menu,snooze);});row.Children.Add(snooze);row.Children.Add(UI.Button("打开",()=>app.ShowNote(n)));} }
+ public ReminderWindow(DeskApp app,List<Tuple<Note,TaskItem>> items) {UI.WindowTheme(this);Title="NoteDesk · 到时间了";Width=400;Height=Math.Min(620,210+items.Count*135);WindowStyle=WindowStyle.ToolWindow;Topmost=true;ShowActivated=false;ShowInTaskbar=false;ResizeMode=ResizeMode.NoResize;Left=SystemParameters.WorkArea.Right-Width-22;Top=Math.Max(SystemParameters.WorkArea.Top+15,SystemParameters.WorkArea.Bottom-Height-22);var p=new StackPanel {Margin=new Thickness(22)};p.Children.Add(UI.Text(items.Count>1?items.Count+" 件事在等你":"到时间了，轻轻提醒你",21,UI.Ink));p.Children.Add(UI.Text("错过的提醒也会在这里汇合。",11,UI.Muted));Content=new ScrollViewer {Content=p};foreach(var pair in items){var n=pair.Item1;var t=pair.Item2;var box=new StackPanel {Margin=new Thickness(0,20,0,5)};p.Children.Add(box);box.Children.Add(UI.Text(t.Text,17,UI.Ink));box.Children.Add(UI.Text(n.Title+" · 截止 "+UI.DateLabel(t.Due),11,UI.Muted));var row=UI.Row();row.Margin=new Thickness(0,10,0,0);box.Children.Add(row);row.Children.Add(UI.Button("完成",()=>{if(n.State=="active"){app.Toggle(n,t,true);app.RefreshNote(n);}p.Children.Remove(box);if(p.Children.Count==2)Close();},true));Button snooze=null;snooze=UI.Button("稍后",()=>{app.OpenSnoozeMenu(snooze,n,t,()=>{p.Children.Remove(box);if(p.Children.Count==2)Close();});});row.Children.Add(snooze);row.Children.Add(UI.Button("打开",()=>app.ShowNote(n)));} }
 }
 public class UndoToast:Window {
  public UndoToast(DeskApp app,string title,Action action) {UI.WindowTheme(this);Width=380;Height=100;WindowStyle=WindowStyle.None;AllowsTransparency=true;Background=Brushes.Transparent;Topmost=true;ShowActivated=false;ShowInTaskbar=false;Left=SystemParameters.WorkArea.Right-Width-22;Top=SystemParameters.WorkArea.Bottom-Height-22;var p=new StackPanel();p.Children.Add(UI.Text("✦ 已归档 · "+title,13,UI.Ink));var b=UI.Button("撤销归档",()=>{action();Close();});b.HorizontalAlignment=HorizontalAlignment.Left;b.Margin=new Thickness(0,7,0,0);p.Children.Add(b);Content=new Border {Background=AppearancePalette.ToastBrush(DesktopGlass.EffectsAllowed),CornerRadius=new CornerRadius(12),Padding=new Thickness(16),Child=p};var timer=new DispatcherTimer {Interval=TimeSpan.FromSeconds(8)};timer.Tick+=(s,e)=>{timer.Stop();Close();};Closed+=(s,e)=>timer.Stop();timer.Start();}
